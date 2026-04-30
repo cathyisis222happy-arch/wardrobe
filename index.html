@@ -233,6 +233,13 @@
       0%,100%{opacity:.4}
       50%{opacity:1}
     }
+    .remove-bg-status{display:inline-flex;align-items:center;gap:4px}
+    .remove-bg-status .spinner{
+      width:14px;height:14px;border:2px solid var(--border);
+      border-top-color:var(--accent);border-radius:50%;
+      animation:spin .6s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
 
     /* Modal */
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;justify-content:center}
@@ -374,6 +381,10 @@
     <div class="chip-row" id="itemColorChips"></div>
     <div class="section-label">季节（可选）</div>
     <div class="chip-row" id="itemSeasonChips"></div>
+    <div style="margin-top:8px">
+      <button class="btn-outline" style="font-size:12px;padding:6px 14px;display:none" id="btnRemoveBg">✨ 去除背景</button>
+      <span class="remove-bg-status" id="removeBgStatus" style="display:none;font-size:12px;color:var(--text-secondary);margin-left:8px"></span>
+    </div>
     <div class="modal-actions">
       <button class="btn-outline" style="flex:1" id="btnItemCancel">取消</button>
       <button class="btn-primary" style="flex:1" id="btnItemSave">保存</button>
@@ -963,7 +974,7 @@ async function init(){
   $('#itemPreview').addEventListener('click',()=>$('#fileItem').click());
   $('#fileItem').addEventListener('change',e=>{
     const f=e.target.files[0];if(!f)return;const reader=new FileReader();
-    reader.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const mw=800;const s=Math.min(1,mw/img.width);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);itemImage=c.toDataURL('image/jpeg',.8);$('#itemPreview').innerHTML=`<img src="${itemImage}" alt="">`;const pImg=$('#itemPreview').querySelector('img');if(pImg)detectItemColor(pImg)};img.src=reader.result};reader.readAsDataURL(f);
+    reader.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const mw=800;const s=Math.min(1,mw/img.width);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);itemImage=c.toDataURL('image/jpeg',.8);$('#itemPreview').innerHTML=`<img src="${itemImage}" alt="">`;const pImg=$('#itemPreview').querySelector('img');if(pImg)detectItemColor(pImg);$('#btnRemoveBg').style.display='inline-block';$('#btnRemoveBg').textContent='✨ 去除背景';$('#removeBgStatus').style.display='none'};img.src=reader.result};reader.readAsDataURL(f);
   });
 
   // Item save
@@ -974,6 +985,9 @@ async function init(){
     document.getElementById('addItemModal').classList.remove('show');
     await reloadAll();toast(itemEditingId?'已更新':'已添加');
   });
+
+  // Remove background
+  $('#btnRemoveBg').addEventListener('click',()=>{if(window.removeBg)window.removeBg()});
 
   // Item cancel
   $('#btnItemCancel').addEventListener('click',()=>{$('#addItemModal').classList.remove('show')});
@@ -986,6 +1000,40 @@ async function init(){
 }
 
 document.addEventListener('DOMContentLoaded',init);
+</script>
+<script type="module">
+// ─── Background Removal ───
+import {removeBackground} from 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/+esm';
+let bgRemovalReady=false;let bgRemovalBusy=false;
+
+window.removeBg = async function(){
+  if(bgRemovalBusy)return;
+  const btn=$('#btnRemoveBg');const status=$('#removeBgStatus');
+  if(!itemImage||!btn||!status)return;
+  bgRemovalBusy=true;
+  btn.style.display='none';
+  status.style.display='inline-flex';
+  status.innerHTML='<span class="spinner"></span> 正在抠图…';
+  try{
+    // Convert data URL to blob
+    const resp=await fetch(itemImage);
+    const blob=await resp.blob();
+    const resultBlob=await removeBackground(blob);
+    const reader=new FileReader();
+    reader.onload=()=>{
+      itemImage=reader.result;
+      $('#itemPreview').querySelector('img').src=itemImage;
+      status.innerHTML='✅ 已抠图';
+      setTimeout(()=>{status.style.display='none';btn.style.display='inline-block';btn.textContent='🔄 重新抠图'},2000);
+      bgRemovalBusy=false;
+    };
+    reader.readAsDataURL(resultBlob);
+  }catch(e){
+    status.innerHTML='❌ 失败';
+    setTimeout(()=>{status.style.display='none';btn.style.display='inline-block'},2000);
+    bgRemovalBusy=false;
+  }
+};
 </script>
 </body>
 </html>
