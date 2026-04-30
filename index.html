@@ -195,7 +195,17 @@
     .tomorrow-hero .hero-icon{font-size:48px}
     .tomorrow-hero .hero-temp{font-size:48px;font-weight:700;line-height:1.2}
     .tomorrow-hero .hero-range{font-size:15px;color:var(--text-secondary)}
-    .tomorrow-hero .hero-date{font-size:13px;color:var(--text-secondary);margin-top:4px}
+        .tomorrow-hero .hero-date{font-size:13px;color:var(--text-secondary);margin-top:4px}
+    .tips-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .tip-chip{
+      display:flex;align-items:center;gap:6px;
+      background:var(--card);border:1.5px solid var(--border);
+      border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;
+      flex:1 1 auto;min-width:0;
+    }
+    .tip-chip .tip-icon{font-size:22px}
+    .tip-chip .tip-text{font-size:12px;color:var(--text);line-height:1.4}
+    .tip-chip .tip-text strong{color:var(--accent)}
     .outfit-visual{
       background:var(--accent-soft);border-radius:var(--radius);
       padding:20px;display:flex;flex-direction:column;align-items:center;
@@ -332,6 +342,7 @@
       <div id="tomorrowEmpty" class="empty" style="padding:60px 20px"><div class="emoji">🌤️</div><p>正在获取明天天气…</p></div>
       <div id="tomorrowContent" style="display:none">
         <div class="tomorrow-hero" id="tomorrowHero"></div>
+        <div class="tips-row" id="tomorrowTips"></div>
         <div class="section-label">推荐搭配 <span style="font-size:12px;color:var(--text-secondary);font-weight:400" id="comboIndex"></span></div>
         <div class="outfit-visual" id="outfitVisual"></div>
         <div class="outfit-items-list" id="outfitItemsList"></div>
@@ -641,6 +652,56 @@ function renderTomorrowTab(){
   tmwAllCombos=getTomorrowCombos(temp);
   tmwComboIndex=0;
   renderCombo();
+  renderTips();
+}
+
+function getSpecialTips(tw){
+  const tips=[];
+  const code=tw.weathercode;
+  const tmax=tw.max,tmin=tw.min;
+  // Rain
+  if((code>=51&&code<=65)||(code>=80&&code<=82)||(code>=95&&code<=99)){
+    tips.push({icon:'☂️',text:'<strong>记得带伞</strong>，明天有雨'});
+  }
+  // Hot sun
+  if(code===0&&tmax>=28){
+    tips.push({icon:'🧢',text:'太阳大，<strong>遮阳帽</strong>戴上'});
+  }
+  if(tmax>=30){
+    tips.push({icon:'🧴',text:'紫外线强，记得<strong>涂防晒</strong>'});
+  }
+  if(tmax>=35){
+    tips.push({icon:'💧',text:'高温天，出门<strong>多带水</strong>'});
+  }
+  // Cold
+  if(tmax<=8){
+    tips.push({icon:'🧣',text:'天冷，<strong>围巾</strong>备上'});
+  }
+  if(tmin<=0){
+    tips.push({icon:'🧤',text:'零下啦，<strong>手套</strong>别忘了'});
+  }
+  // Fog
+  if(code===45||code===48){
+    tips.push({icon:'🌫️',text:'有雾，<strong>出行注意安全</strong>'});
+  }
+  // Big temp difference
+  if(tmax-tmin>=12){
+    tips.push({icon:'🧥',text:'温差大，<strong>带件外套</strong>早晚穿'});
+  }
+  return tips;
+}
+
+function renderTips(){
+  if(!tomorrowWeather)return;
+  const tips=getSpecialTips(tomorrowWeather);
+  const el=$('#tomorrowTips');
+  if(tips.length===0){el.innerHTML='';return}
+  el.innerHTML=tips.map(t=>`
+    <div class="tip-chip">
+      <span class="tip-icon">${t.icon}</span>
+      <span class="tip-text">${t.text}</span>
+    </div>
+  `).join('');
 }
 
 function renderCombo(){
