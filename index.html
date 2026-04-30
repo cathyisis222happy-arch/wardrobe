@@ -971,7 +971,7 @@ function renderCalendar(){
     const isToday=year===todayNow.getFullYear()&&month===todayNow.getMonth()&&d===todayNow.getDate();
     const outfit=outfitsByDate[dateStr];
     const moodMap={开心:'❤️',还行:'💛',疲惫:'💙',精致:'💖',悠闲:'💚'};
-    const moodEmoji=outfit?.(moodMap[outfit.mood]||'❤️'):null;
+    const moodEmoji=outfit?(moodMap[outfit.mood]||'❤️'):null;
     let cls='day-cell';
     if(isToday)cls+=' today';
     const num=`<span class="day-num">${d}</span>`;
