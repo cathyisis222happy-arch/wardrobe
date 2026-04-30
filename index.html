@@ -204,6 +204,16 @@
     .empty{text-align:center;padding:40px 20px;color:var(--text-secondary)}
     .empty .emoji{font-size:48px;margin-bottom:12px}
     .empty p{font-size:14px;line-height:1.6}
+
+    /* Inspiration gallery */
+    .inspo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .inspo-card{border-radius:var(--radius-sm);overflow:hidden;background:var(--card);box-shadow:var(--shadow);cursor:pointer;border:1px solid var(--border)}
+    .inspo-card .inspo-img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block}
+    .inspo-card .inspo-info{padding:8px 10px}
+    .inspo-card .inspo-date{font-size:11px;color:var(--text-secondary)}
+    .inspo-card .inspo-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+    .inspo-card .inspo-tags span{font-size:10px;background:var(--accent-soft);color:var(--accent);padding:2px 8px;border-radius:10px}
+    .divider{height:1px;background:var(--border);margin:20px 0}
   </style>
 </head>
 <body>
@@ -237,6 +247,9 @@
         <button id="btnNextMonth">›</button>
       </div>
       <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="divider"></div>
+      <div class="section-label">✨ 灵感池</div>
+      <div class="inspo-grid" id="inspoGrid"></div>
       <div id="calendarEmpty" class="empty" style="display:none"><p>暂无记录</p></div>
     </div>
 
@@ -430,6 +443,32 @@ function renderSuggestion(){
 }
 
 // ─── Calendar Tab ───
+function renderInspo(){
+  const sorted=[...outfits].sort((a,b)=>b.date.localeCompare(a.date));
+  const el=$('#inspoGrid');
+  if(sorted.length===0){el.innerHTML='<div class="empty" style="grid-column:1/-1"><p style="font-size:13px">还没有穿搭记录</p></div>';return}
+  el.innerHTML=sorted.map(o=>{
+    return `<div class="inspo-card" data-id="${o.id}">
+      <img class="inspo-img" src="${o.image}" alt="">
+      <div class="inspo-info">
+        <div class="inspo-date">${o.date}</div>
+        <div class="inspo-tags">
+          ${o.occasion?`<span>${o.occasion}</span>`:''}
+          ${o.mood?`<span>${o.mood}</span>`:''}
+          ${o.weather?`<span>${o.weather}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.inspo-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      const id=parseInt(card.dataset.id);
+      const o=outfits.find(x=>x.id===id);
+      if(o)showOutfitDetail(o);
+    });
+  });
+}
+
 function renderCalendar(){
   const year=calendarYear,month=calendarMonth;
   $('#monthLabel').textContent=`${year}年${month+1}月`;
@@ -476,6 +515,7 @@ function renderCalendar(){
       if(date&&outfitsByDate[date])showOutfitDetail(outfitsByDate[date]);
     });
   });
+  renderInspo();
 }
 
 function showOutfitDetail(outfit){
@@ -602,8 +642,9 @@ async function reloadAll(){
   outfits=await dbGetAll('outfits');
   outfitsByDate={};
   outfits.forEach(o=>{outfitsByDate[o.date]=o});
+  outfits.sort((a,b)=>b.date.localeCompare(a.date));
   if(currentTab==='log')renderLog();
-  if(currentTab==='calendar')renderCalendar();
+  if(currentTab==='calendar'){renderCalendar();renderInspo()}
   if(currentTab==='wardrobe')renderWardrobe();
 }
 
