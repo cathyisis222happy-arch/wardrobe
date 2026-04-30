@@ -380,7 +380,7 @@
     /* Image preview for upload */
     .upload-preview {
       width: 100%;
-      aspect-ratio: 3/4;
+      max-height: 360px;
       border-radius: var(--radius-sm);
       background: var(--accent-light);
       border: 2px dashed var(--accent);
@@ -393,9 +393,10 @@
       margin-bottom: 12px;
       gap: 8px;
       transition: all 0.2s;
+      min-height: 180px;
     }
     .upload-preview:active { background: #ffe4ea; }
-    .upload-preview img { width:100%; height:100%; object-fit:cover; position:absolute; }
+    .upload-preview img { width:100%; height:100%; object-fit:contain; }
     .upload-preview .placeholder { color: var(--text-secondary); font-size: 13px; z-index:1; }
     .upload-preview .placeholder-icon { font-size: 36px; z-index:1; }
     .upload-actions { display:flex; gap:10px; margin-bottom:12px; }
