@@ -244,12 +244,13 @@
       50%{opacity:1}
     }
     .remove-bg-status{display:inline-flex;align-items:center;gap:4px}
-    .remove-bg-status .spinner{
+        .remove-bg-status .spinner{
       width:14px;height:14px;border:2px solid var(--border);
       border-top-color:var(--accent);border-radius:50%;
       animation:spin .6s linear infinite;
     }
     @keyframes spin{to{transform:rotate(360deg)}}
+    .style-row .section-label{margin-top:12px!important}
 
     /* Modal */
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;justify-content:center}
@@ -306,12 +307,15 @@
 
     <!-- TAB: 记录 -->
     <div class="page" id="page-log">
-      <div class="tomorrow-card" id="tomorrowCard"></div>
-      <div class="suggestion-card" id="suggestion"></div>
       <div class="outfit-photo" id="outfitPhoto">
         <div class="placeholder"><div class="placeholder-icon">📸</div><div class="placeholder-text">记录今日穿搭</div></div>
       </div>
       <input type="file" accept="image/*" id="fileOutfit" style="display:none">
+      <div class="style-row" id="styleRow" style="display:none">
+        <div class="section-label" style="margin-top:12px">封面风格</div>
+        <div class="chip-row" id="styleChips"></div>
+        <button class="btn-outline" id="btnSaveImage" style="margin-top:8px;width:100%">💾 保存封面图</button>
+      </div>
       <div class="weather-strip" id="weatherStrip">🌤️ 获取天气中…</div>
       <div class="section-label">场合</div>
       <div class="chip-row" id="occasionChips"></div>
@@ -422,7 +426,7 @@ let clothes=[],outfits=[],outfitsByDate={};
 let todayStr=new Date().toISOString().slice(0,10);
 let weather=null,currentTab='tomorrow';
 let outfitImage=null,todayOutfit=null, tomorrowWeather=null;
-let selectedOccasion='',selectedMood='',selectedItemIds=[];
+let selectedOccasion='',selectedMood='',selectedItemIds=[], outfitStyle='magazine';
 let calendarMonth=new Date().getMonth(),calendarYear=new Date().getFullYear();
 
 // Item form state
@@ -486,7 +490,9 @@ async function renderLog(){
   todayOutfit=todays.length?todays[0]:null;
 
   if(todayOutfit){
-    $('#outfitPhoto').innerHTML=`<img src="${todayOutfit.image}" alt="">`;
+    outfitImage=todayOutfit.image;
+    renderStyleChips();
+    renderStyledPreview();
     selectedOccasion=todayOutfit.occasion||'';
     selectedMood=todayOutfit.mood||'';
     selectedItemIds=todayOutfit.itemIds||[];
@@ -501,8 +507,6 @@ async function renderLog(){
   renderMoodChips();
   renderLinkedItems();
   renderWeather();
-  renderSuggestion();
-  renderTomorrow();
 }
 
 function renderOccasionChips(){
@@ -515,6 +519,96 @@ function renderMoodChips(){
   const el=$('#moodChips');
   el.innerHTML=MOODS.map(m=>`<span class="chip${selectedMood===m.label?' active':''}" data-val="${m.label}">${m.emoji} ${m.label}</span>`).join('');
   el.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{selectedMood=c.dataset.val===selectedMood?'':c.dataset.val;renderMoodChips()}));
+}
+
+// ─── Style Covers ───
+const STYLES=[
+  {id:'magazine',label:'📰 杂志封面'},
+  {id:'vintage',label:'📷 复古胶片'},
+  {id:'clean',label:'🤍 极简白'},
+  {id:'japanese',label:'🌸 日系清新'},
+];
+
+function renderStyleChips(){
+  const el=$('#styleChips');
+  el.innerHTML=STYLES.map(s=>`<span class="chip${outfitStyle===s.id?' active':''}" data-style="${s.id}">${s.label}</span>`).join('');
+  el.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    outfitStyle=c.dataset.style;renderStyleChips();renderStyledPreview();
+  }));
+}
+
+function renderStyledPreview(){
+  const src=outfitImage||(todayOutfit?todayOutfit.image:null);
+  if(!src)return;
+  $('#styleRow').style.display='block';
+  const base=document.createElement('canvas');
+  const ctx=base.getContext('2d');
+  const tempImg=new Image();
+  tempImg.onload=()=>{
+    const ratio=tempImg.height/tempImg.width;
+    const padW=60,padH=80;
+    const w=600,h=Math.round(600*ratio);
+    base.width=w+padW*2;
+    base.height=h+padH*2+180;
+    switch(outfitStyle){
+      case 'magazine':drawMagazine(base,ctx,tempImg,w,h,padW,padH);break;
+      case 'vintage':drawVintage(base,ctx,tempImg,w,h,padW,padH);break;
+      case 'clean':drawClean(base,ctx,tempImg,w,h,padW,padH);break;
+      case 'japanese':drawJapanese(base,ctx,tempImg,w,h,padW,padH);break;
+    }
+    $('#outfitPhoto').innerHTML=`<img src="${base.toDataURL('image/jpeg',.9)}" alt="">`;
+    // Store for save
+    base._styledUrl=base.toDataURL('image/jpeg',.92);
+    $('#outfitPhoto')._canvas=base;
+  };
+  tempImg.src=src;
+}
+
+function drawMagazine(c,ctx,img,w,h,pW,pH){
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle='#f5f5f5';ctx.fillRect(pW-10,pH-10,w+20,h+20);
+  ctx.drawImage(img,pW,pH,w,h);
+  ctx.fillStyle='#111';ctx.font='bold 42px serif';ctx.textAlign='center';
+  ctx.fillText("TODAY'S",c.width/2,pH+h+50);
+  ctx.fillText('O U T F I T',c.width/2,pH+h+100);
+  ctx.fillStyle='#d4a574';ctx.fillRect(c.width/2-60,pH+h+115,120,2);
+  ctx.fillStyle='#888';ctx.font='14px sans-serif';
+  ctx.fillText(`${todayStr}`,c.width/2,pH+h+145);
+}
+
+function drawVintage(c,ctx,img,w,h,pW,pH){
+  ctx.fillStyle='#f5efe0';ctx.fillRect(0,0,c.width,c.height);
+  ctx.drawImage(img,pW,pH,w,h);
+  ctx.fillStyle='#c4b8a0';
+  for(let y=pH+8;y<pH+h;y+=24){ctx.beginPath();ctx.arc(pW-14,y,4,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(pW+w+14,y,4,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle='#e89030';ctx.font='bold 16px monospace';ctx.textAlign='right';
+  ctx.fillText(todayStr.replace(/-/g,'.'),c.width-pW-10,pH+h+40);
+  ctx.fillStyle='rgba(0,0,0,.03)';
+  for(let i=0;i<800;i++){ctx.fillRect(Math.random()*c.width,Math.random()*c.height,1,1)}
+}
+
+function drawClean(c,ctx,img,w,h,pW,pH){
+  ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,c.width,c.height);
+  ctx.shadowColor='rgba(0,0,0,.1)';ctx.shadowBlur=20;
+  ctx.drawImage(img,pW-4,pH-4,w+8,h+8);
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;
+  ctx.drawImage(img,pW,pH,w,h);
+  ctx.fillStyle='#333';ctx.font='300 20px sans-serif';ctx.textAlign='center';
+  ctx.fillText(new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric'}),c.width/2,pH+h+40);
+  ctx.fillStyle='#333';ctx.font='14px sans-serif';
+  ctx.fillText('今日穿搭',c.width/2,pH+h+65);
+}
+
+function drawJapanese(c,ctx,img,w,h,pW,pH){
+  ctx.fillStyle='#fdf6f8';ctx.fillRect(0,0,c.width,c.height);
+  ctx.drawImage(img,pW,pH,w,h);
+  ctx.fillStyle='rgba(255,240,245,.15)';ctx.fillRect(pW,pH,w,h);
+  ctx.fillStyle='rgba(240,170,185,.5)';
+  for(let i=0;i<12;i++){ctx.beginPath();ctx.arc(pW+w-20+Math.random()*40,pH+Math.random()*h,3,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle='#c0909a';ctx.font='300 22px serif';ctx.textAlign='center';
+  ctx.fillText('今日のコーデ',c.width/2,pH+h+45);
+  ctx.fillStyle='#d4a0a0';ctx.font='12px serif';
+  ctx.fillText(todayStr.replace(/-/g,'.'),c.width/2,pH+h+68);
 }
 
 function renderLinkedItems(){
@@ -1003,7 +1097,7 @@ async function init(){
   $('#fileOutfit').addEventListener('change',e=>{
     const f=e.target.files[0];if(!f)return;
     const reader=new FileReader();
-    reader.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const mw=1200;const s=Math.min(1,mw/img.width);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);outfitImage=c.toDataURL('image/jpeg',.85);$('#outfitPhoto').innerHTML=`<img src="${outfitImage}" alt="">`};img.src=reader.result};reader.readAsDataURL(f);
+    reader.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');const mw=1200;const s=Math.min(1,mw/img.width);c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);outfitImage=c.toDataURL('image/jpeg',.85);renderStyleChips();renderStyledPreview()};img.src=reader.result};reader.readAsDataURL(f);
   });
 
   // Save outfit
@@ -1058,6 +1152,17 @@ async function init(){
   // Tomorrow shuffle
   $('#btnShuffle').addEventListener('click',shuffleCombo);
   initShake();
+
+  // Save cover image
+  $('#btnSaveImage').addEventListener('click',()=>{
+    const cnv=$('#outfitPhoto')._canvas;
+    if(!cnv)return;
+    const link=document.createElement('a');
+    link.download=`outfit-${todayStr}.jpg`;
+    link.href=cnv.toDataURL('image/jpeg',.92);
+    link.click();
+    toast('封面已保存');
+  });
 }
 
 document.addEventListener('DOMContentLoaded',init);
